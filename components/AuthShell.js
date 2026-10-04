@@ -16,7 +16,7 @@ export default function AuthShell({ title, subtitle, children }) {
         <div className="relative"><Logo light /></div>
         <div className="relative">
           <p className="max-w-md font-display text-4xl font-bold leading-tight">
-            Your work deserves a better link than a PDF.
+            Your work deserves a better link than a PDF.Docss
           </p>
           <ul className="mt-10 max-w-md space-y-3">
             {POINTS.map(([Icon, bg, head, text]) => (
