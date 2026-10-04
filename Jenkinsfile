@@ -33,8 +33,21 @@ pipeline {
         '''
       }
     }
+    // Unknown email must get 401: proves the app is up and MySQL answers
     stage('Health check') {
-      steps { sh 'sleep 5 && curl -f http://127.0.0.1:$APP_PORT/login' }
+      steps {
+        sh '''
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" \
+              -d '{"email":"check@example.invalid","password":"x"}' http://127.0.0.1:$APP_PORT/api/auth/login)
+            echo "Try $i: $code"
+            [ "$code" = "401" ] && exit 0
+            sleep 3
+          done
+          echo "Health check failed. See: pm2 logs $APP_NAME --err --lines 50"
+          exit 1
+        '''
+      }
     }
   }
 
