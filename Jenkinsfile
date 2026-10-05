@@ -22,8 +22,8 @@ pipeline {
         APP_NAME    = 'my-agent'
         DOMAIN      = 'my-agent.glamofashion.com'
         DEPLOY_HOST = '187.126.117.103'
-        APP_DIR     = '/var/www/my-agent'         // live app dir on DEPLOY_HOST (pm2 runs from here)
-        BUILD_DIR   = '/var/www/my-agent_build'   // new build is made here, then copied to APP_DIR
+        APP_DIR     = '/var/www/Portfolio-app'       // live app dir on DEPLOY_HOST (pm2 runs from here)
+        BUILD_DIR   = '/var/www/Portfolio-app_build' // new build is made here, then copied to APP_DIR
         APP_PORT    = '3301'
     }
 
@@ -80,6 +80,7 @@ pipeline {
 
                             # Swap in the new build. Uploads and the server's .env.local are never overwritten or deleted.
                             rsync -a --delete \
+                                --exclude '.git/' \
                                 --exclude '.env.local' \
                                 --exclude 'uploads/' \
                                 "$BUILD_DIR/" "$APP_DIR/"
