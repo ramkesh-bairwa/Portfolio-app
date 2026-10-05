@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    image: portfolio-app
+    container_name: portfolio-app
+    restart: unless-stopped
+    # Host network: the app reaches MySQL at 127.0.0.1:3306 on the server (MySQL listens on localhost only),
+    # so the same .env.local works with and without Docker
+    network_mode: host
+    env_file: .env.local
+    environment:
+      HOST: 127.0.0.1   # only Nginx can reach the app, not the internet directly
+      PORT: 3301
+    volumes:
+      - ./uploads:/app/uploads

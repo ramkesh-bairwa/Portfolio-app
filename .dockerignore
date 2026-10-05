@@ -1,0 +1,12 @@
+.git
+node_modules
+.next
+.env*
+!.env.example
+uploads
+Jenkinsfile
+Dockerfile
+docker-compose.yml
+.dockerignore
+*.log
+.DS_Store
