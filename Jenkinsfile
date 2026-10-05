@@ -43,20 +43,19 @@ pipeline {
                 }
             }
             steps {
-                withCredentials([usernamePassword(credentialsId: 'gsm-school-ssh',
-                                                  usernameVariable: 'SSH_USER',
-                                                  passwordVariable: 'SSHPASS'),
+                withCredentials([sshUserPrivateKey(credentialsId: 'vps-ssh-key',
+                                                   keyFileVariable: 'SSH_KEY',
+                                                   usernameVariable: 'SSH_USER'),
                                  file(credentialsId: 'my-agent-env', variable: 'ENV_FILE')]) {
-                    // sshpass -e reads the password from $SSHPASS, so it never shows up in logs or `ps`
                     sh '''
                         set -e
-                        SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30"
+                        SSH_OPTS="-i $SSH_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30"
                         REMOTE="$SSH_USER@$DEPLOY_HOST"
 
-                        sshpass -e ssh $SSH_OPTS "$REMOTE" "mkdir -p '$APP_DIR/uploads' '$BUILD_DIR'"
+                        ssh $SSH_OPTS "$REMOTE" "mkdir -p '$APP_DIR/uploads' '$BUILD_DIR'"
 
                         # Sync the source into the build dir. The live app keeps running untouched.
-                        sshpass -e rsync -az --delete \
+                        rsync -az --delete \
                             -e "ssh $SSH_OPTS" \
                             --exclude '.git/' \
                             --exclude 'node_modules/' \
@@ -65,9 +64,9 @@ pipeline {
                             --exclude 'uploads/' \
                             ./ "$REMOTE:$BUILD_DIR/"
 
-                        sshpass -e scp $SSH_OPTS "$ENV_FILE" "$REMOTE:$APP_DIR/.env.local"
+                        scp $SSH_OPTS "$ENV_FILE" "$REMOTE:$APP_DIR/.env.local"
 
-                        sshpass -e ssh $SSH_OPTS "$REMOTE" bash -se <<EOF
+                        ssh $SSH_OPTS "$REMOTE" bash -se <<EOF
                             set -e
                             chmod 600 "$APP_DIR/.env.local"
 
