@@ -1,7 +1,7 @@
 // Deploys this app to the Hostinger VPS at https://my-agent.glamofashion.com
 //
 // Jenkins setup (one time):
-//   Credentials:  vps-ssh-key - "SSH Username with private key", user root (same one project-crm uses)
+//   Credentials:  vps-ssh-key - "SSH Username with private key", user root, key authorised on the VPS
 //   Job:          Pipeline script from SCM -> this repo, branch main, script path Jenkinsfile
 //   Server:       /var/www/Portfolio-app/.env.local must exist (it is never overwritten by a deploy)
 pipeline {
