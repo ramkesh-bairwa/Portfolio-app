@@ -1,3 +1,9 @@
+// Deploys this app to the Hostinger VPS at https://my-agent.glamofashion.com
+//
+// Jenkins setup (one time):
+//   Credentials:  vps-ssh-key - "SSH Username with private key", user root (same one project-crm uses)
+//   Job:          Pipeline script from SCM -> this repo, branch main, script path Jenkinsfile
+//   Server:       /var/www/Portfolio-app/.env.local must exist (it is never overwritten by a deploy)
 pipeline {
     agent any
 
@@ -22,9 +28,11 @@ pipeline {
         APP_NAME    = 'my-agent'
         DOMAIN      = 'my-agent.glamofashion.com'
         DEPLOY_HOST = '187.126.117.103'
+        DEPLOY_USER = 'root'
         APP_DIR     = '/var/www/Portfolio-app'       // live app dir on DEPLOY_HOST (pm2 runs from here)
         BUILD_DIR   = '/var/www/Portfolio-app_build' // new build is made here, then copied to APP_DIR
         APP_PORT    = '3301'
+        SSH_OPTS    = '-o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30'
     }
 
     stages {
@@ -36,23 +44,14 @@ pipeline {
         }
 
         stage('Deploy') {
-            when {
-                allOf {
-                    expression { params.DEPLOY }
-                    anyOf { branch 'main'; expression { env.BRANCH_NAME == null } }
-                }
-            }
+            when { expression { params.DEPLOY != false } }
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'vps-ssh-key',
-                                                   keyFileVariable: 'SSH_KEY',
-                                                   usernameVariable: 'SSH_USER'),
-                                 file(credentialsId: 'my-agent-env', variable: 'ENV_FILE')]) {
+                sshagent(credentials: ['vps-ssh-key']) {
                     sh '''
                         set -e
-                        SSH_OPTS="-i $SSH_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30"
-                        REMOTE="$SSH_USER@$DEPLOY_HOST"
+                        REMOTE="$DEPLOY_USER@$DEPLOY_HOST"
 
-                        ssh $SSH_OPTS "$REMOTE" "mkdir -p '$APP_DIR/uploads' '$BUILD_DIR'"
+                        ssh $SSH_OPTS "$REMOTE" "test -f '$APP_DIR/.env.local' || { echo 'Missing $APP_DIR/.env.local on the server'; exit 1; }; mkdir -p '$APP_DIR/uploads' '$BUILD_DIR'"
 
                         # Sync the source into the build dir. The live app keeps running untouched.
                         rsync -az --delete \
@@ -60,15 +59,12 @@ pipeline {
                             --exclude '.git/' \
                             --exclude 'node_modules/' \
                             --exclude '.next/' \
-                            --exclude '.env.local' \
+                            --exclude '.env*' \
                             --exclude 'uploads/' \
                             ./ "$REMOTE:$BUILD_DIR/"
 
-                        scp $SSH_OPTS "$ENV_FILE" "$REMOTE:$APP_DIR/.env.local"
-
                         ssh $SSH_OPTS "$REMOTE" bash -se <<EOF
                             set -e
-                            chmod 600 "$APP_DIR/.env.local"
 
                             # Build while the old version keeps serving
                             cd "$BUILD_DIR"
@@ -77,10 +73,10 @@ pipeline {
                             npm run build
                             rm -f .env.local
 
-                            # Swap in the new build. Uploads and the server's .env.local are never overwritten or deleted.
+                            # Swap in the new build. .git, uploads and the server's .env.local are never overwritten or deleted.
                             rsync -a --delete \
                                 --exclude '.git/' \
-                                --exclude '.env.local' \
+                                --exclude '.env*' \
                                 --exclude 'uploads/' \
                                 "$BUILD_DIR/" "$APP_DIR/"
 
@@ -112,12 +108,7 @@ EOF
         }
 
         stage('Health Check') {
-            when {
-                allOf {
-                    expression { params.DEPLOY }
-                    anyOf { branch 'main'; expression { env.BRANCH_NAME == null } }
-                }
-            }
+            when { expression { params.DEPLOY != false } }
             steps {
                 // Unknown email must get 401: proves the app is up and MySQL answers
                 sh '''
@@ -146,6 +137,9 @@ EOF
         }
         failure {
             echo "Build #${env.BUILD_NUMBER} failed — the previous version keeps running unless the build got past the rsync into APP_DIR."
+        }
+        always {
+            cleanWs()
         }
     }
 }
