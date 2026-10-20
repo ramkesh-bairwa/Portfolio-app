@@ -7,7 +7,7 @@ export const metadata = { title: 'Plans — Folio', description: 'Start free. Go
 const FAQ = [
   ['Is Folio free?', 'Yes. You can build, edit and preview portfolios, resumes and posters for free, and use every free template.'],
   ['What does Premium unlock?', 'Publishing your portfolio to a live link, downloading resume PDFs and posters, and all premium templates — including the 50 Top Ranking resume designs.'],
-  ['How do I get Premium?', 'Press “Ask for premium” on this page or in your dashboard. An admin reviews the request and turns on premium for your account.'],
+  ['How do I get Premium?', 'Pick a plan on this page and press “Choose”. An admin reviews the request and turns on Premium for your account on that plan.'],
   ['Will I lose my work if I stay on Free?', 'No. Everything you make is saved to your dashboard, and you can upgrade any time.'],
 ];
 
@@ -16,7 +16,7 @@ export default function PlansPage() {
     <>
       <SiteHeader />
       <main>
-        <section className="mx-auto max-w-5xl px-5 pb-16 pt-14">
+        <section className="mx-auto max-w-6xl px-5 pb-16 pt-14">
           <div className="mb-10 text-center">
             <p className="chip bg-sun/25 text-ink">Plans</p>
             <h1 className="mt-3 text-4xl font-extrabold tracking-tight sm:text-5xl">Start free. Go Premium when you’re ready.</h1>

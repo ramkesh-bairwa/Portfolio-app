@@ -9,7 +9,7 @@ export async function PATCH(req, { params }) {
   if (!r) return fail('Request not found.', 404);
   if (action === 'approve') {
     await query("UPDATE premium_requests SET status = 'approved', reviewed_at = NOW() WHERE id = ?", [r.id]);
-    await query('UPDATE users SET is_premium = 1 WHERE id = ?', [r.user_id]);
+    await query('UPDATE users SET is_premium = 1, plan_id = COALESCE(?, plan_id) WHERE id = ?', [r.plan_id, r.user_id]);
   } else if (action === 'reject') {
     await query("UPDATE premium_requests SET status = 'rejected', reviewed_at = NOW() WHERE id = ?", [r.id]);
   } else return fail('Unknown action.');

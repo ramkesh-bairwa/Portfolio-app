@@ -102,7 +102,7 @@ export default async function Home() {
         </section>
 
         <section id="plans" className="scroll-mt-16 border-t border-line">
-          <div className="mx-auto max-w-5xl px-5 py-20">
+          <div className="mx-auto max-w-6xl px-5 py-20">
             <div className="mb-10 text-center">
               <p className="chip bg-sun/25 text-ink">Plans</p>
               <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Start free. Go Premium when you're ready.</h2>

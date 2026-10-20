@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
   status ENUM('pending','active','rejected','blocked') NOT NULL DEFAULT 'pending',
   is_premium TINYINT(1) NOT NULL DEFAULT 0,
   free_access TINYINT(1) NOT NULL DEFAULT 0,
+  plan_id INT UNSIGNED NULL,
   whatsapp_opt_in TINYINT(1) NOT NULL DEFAULT 0,
   whatsapp_opt_in_at DATETIME NULL,
   last_login_at DATETIME NULL,
@@ -53,6 +54,7 @@ CREATE TABLE IF NOT EXISTS premium_requests (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id INT UNSIGNED NOT NULL,
   message VARCHAR(500) NOT NULL DEFAULT '',
+  plan_id INT UNSIGNED NULL,
   status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   reviewed_at DATETIME NULL,
@@ -77,6 +79,21 @@ CREATE TABLE IF NOT EXISTS settings (
 INSERT IGNORE INTO settings (k, v) VALUES
   ('download_requires_premium', '1'),
   ('allow_guest_uploads', '1');
+
+CREATE TABLE IF NOT EXISTS plans (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(60) NOT NULL,
+  price DECIMAL(10,2) NOT NULL DEFAULT 0,
+  currency CHAR(3) NOT NULL DEFAULT 'USD',
+  period ENUM('month','year','once') NOT NULL DEFAULT 'year',
+  description VARCHAR(255) NOT NULL DEFAULT '',
+  features TEXT NOT NULL,
+  is_popular TINYINT(1) NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS resumes (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

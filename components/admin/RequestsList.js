@@ -1,6 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Check, Crown, Loader2, X } from 'lucide-react';
+import { PERIODS, formatPrice } from '@/lib/price';
+
+const planLabel = (r) => r.plan_name && `${r.plan_name} · ${formatPrice(r.plan_price, r.plan_currency)} ${PERIODS[r.plan_period] || ''}`;
 
 export default function RequestsList() {
   const [rows, setRows] = useState(null);
@@ -19,7 +22,7 @@ export default function RequestsList() {
   return (
     <div className="max-w-4xl">
       <h1 className="text-3xl font-extrabold tracking-tight">Premium requests</h1>
-      <p className="mt-1 text-mute">Approving a request turns on Premium for that user, so they can publish any template.</p>
+      <p className="mt-1 text-mute">Approving a request turns on Premium for that user on the plan they picked, so they can publish any template.</p>
       {rows === null ? <Loader2 className="mt-10 animate-spin text-signal" /> : (
         <>
           <h2 className="mb-3 mt-8 font-bold">Waiting ({pending.length})</h2>
@@ -30,6 +33,7 @@ export default function RequestsList() {
                 <span className="grid h-10 w-10 place-items-center rounded-xl bg-sun/25"><Crown size={18} /></span>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{r.name || 'No name'} <span className="font-normal text-mute">· {r.email || r.phone}</span></p>
+                  {r.plan_name && <p className="mt-1"><span className="chip bg-sun/25 text-ink">{planLabel(r)}</span></p>}
                   {r.message && <p className="mt-1 text-sm">“{r.message}”</p>}
                   <p className="text-xs text-mute">Asked {new Date(r.created_at.replace(' ', 'T')).toLocaleString()}</p>
                 </div>
@@ -44,7 +48,7 @@ export default function RequestsList() {
               <div className="card divide-y divide-line">
                 {done.map((r) => (
                   <div key={r.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-                    <span className="truncate">{r.name || r.email || r.phone}</span>
+                    <span className="truncate">{r.name || r.email || r.phone}{r.plan_name && <span className="text-mute"> · {r.plan_name}</span>}</span>
                     <span className={`chip ${r.status === 'approved' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{r.status}</span>
                   </div>
                 ))}

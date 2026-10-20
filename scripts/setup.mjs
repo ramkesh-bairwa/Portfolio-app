@@ -21,6 +21,8 @@ const ADDED_COLUMNS = [
   ['portfolios', 'slug', 'VARCHAR(40) NULL UNIQUE AFTER data'],
   ['portfolios', 'published_data', 'LONGTEXT NULL AFTER slug'],
   ['portfolios', 'published_at', 'DATETIME NULL AFTER published_data'],
+  ['users', 'plan_id', 'INT UNSIGNED NULL AFTER free_access'],
+  ['premium_requests', 'plan_id', 'INT UNSIGNED NULL AFTER message'],
 ];
 for (const [table, column, def] of ADDED_COLUMNS) {
   const [found] = await conn.query('SELECT 1 FROM information_schema.columns WHERE table_schema = ? AND table_name = ? AND column_name = ?', [db, table, column]);
@@ -30,6 +32,23 @@ for (const [table, column, def] of ADDED_COLUMNS) {
   }
 }
 console.log(`Schema ready in "${db}"`);
+
+// Starter plans, only on an empty table so plans an admin edited or deleted are not brought back
+const [[{ n: planCount }]] = await conn.query('SELECT COUNT(*) AS n FROM plans');
+if (!planCount) {
+  const STARTER_PLANS = [
+    ['Basic', 49, 'For getting your first portfolio online.', ['Publish your portfolio to a live link', 'Download resume PDFs and posters', 'Premium portfolio and resume templates'], 0, 1],
+    ['Pro', 79, 'For job seekers who want every advantage.', ['Everything in Basic', 'Top-ranking ATS Pro resume designs', 'Copy a poster design from a photo'], 1, 2],
+    ['Business', 99, 'For freelancers and teams who need more.', ['Everything in Pro', 'Priority support', 'Early access to new templates'], 0, 3],
+  ];
+  for (const [name, price, description, features, popular, sort] of STARTER_PLANS) {
+    await conn.query(
+      'INSERT INTO plans (name, price, currency, period, description, features, is_popular, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [name, price, 'USD', 'year', description, features.join('\n'), popular, sort]
+    );
+  }
+  console.log('Added starter plans: $49, $79, $99');
+}
 
 const email = (process.env.ADMIN_EMAIL || 'admin@example.com').toLowerCase();
 const [rows] = await conn.query('SELECT id FROM users WHERE email = ?', [email]);
