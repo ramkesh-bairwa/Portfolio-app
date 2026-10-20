@@ -1,8 +1,11 @@
 'use client';
 import { useId, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Copy, ImagePlus, Images, Loader2, Plus, Trash2, Upload, X } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { ChevronDown, ChevronUp, Copy, ImagePlus, Images, LayoutTemplate, Loader2, Plus, Trash2, Upload, X } from 'lucide-react';
 import { FontPicker } from './FontPicker';
 import ShapePicker from './ShapePicker';
+
+const DesignLibrary = dynamic(() => import('./DesignLibrary'), { ssr: false });
 
 export async function uploadFiles(fileList) {
   const fd = new FormData();
@@ -32,6 +35,7 @@ export function ImageInput({ value, onChange, id }) {
   const [err, setErr] = useState('');
   const [over, setOver] = useState(false);
   const [lib, setLib] = useState(null);
+  const [designs, setDesigns] = useState(false);
   async function upload(files) {
     const list = imageFiles(files);
     if (!list.length) return;
@@ -69,6 +73,7 @@ export function ImageInput({ value, onChange, id }) {
               {busy ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />} {busy ? 'Uploading…' : 'Upload'}
             </button>
             <button type="button" onClick={() => setLib(lib ? null : recentUploads())} className={`btn-light px-2 py-1.5 ${lib ? 'border-signal' : ''}`} title="My uploads and sample photos" aria-label="Photo library"><Images size={14} /></button>
+            <button type="button" onClick={() => setDesigns(true)} className="btn-light px-2 py-1.5" title="Design library: 2,000 ready-made designs" aria-label="Design library"><LayoutTemplate size={14} /></button>
             {value && <button type="button" onClick={() => onChange('')} className="btn-light px-2 py-1.5 hover:text-red-600" aria-label="Remove image"><X size={14} /></button>}
           </div>
           <input id={id} className="input py-1.5 text-xs" placeholder="Drop, paste (Ctrl+V) or link an image" value={value || ''} onChange={(e) => onChange(e.target.value)} />
@@ -93,6 +98,7 @@ export function ImageInput({ value, onChange, id }) {
         </div>
       )}
       {err && <p className="mt-1 text-xs text-red-600">{err}</p>}
+      {designs && <DesignLibrary onPick={([d]) => onChange(d.url)} onClose={() => setDesigns(false)} />}
       <input ref={ref} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={(e) => { upload(e.target.files); e.target.value = ''; }} />
     </div>
   );
@@ -162,6 +168,9 @@ function ListField({ field, value, onChange }) {
     return (textKey && it[textKey]) || `Item ${i + 1}`;
   };
   const [over, setOver] = useState(false);
+  const [designs, setDesigns] = useState(false);
+  const captionKey = ['caption', 'title', 'name'].find((k) => field.fields.some((f) => f.k === k));
+  const addDesigns = (list) => onChange([...items, ...list.map((d) => ({ ...field.item, [imageKey]: d.url, ...(captionKey ? { [captionKey]: d.title } : {}) }))]);
   async function addFiles(files) {
     const list = imageFiles(files).slice(0, 20);
     if (!list.length) return;
@@ -219,6 +228,12 @@ function ListField({ field, value, onChange }) {
           </>
         )}
       </div>
+      {field.bulkImage && (
+        <button type="button" className="btn-light w-full py-1.5" onClick={() => setDesigns(true)}>
+          <LayoutTemplate size={14} /> Add from design library
+        </button>
+      )}
+      {designs && <DesignLibrary multi onPick={addDesigns} onClose={() => setDesigns(false)} />}
       {field.bulkImage && <p className="text-[11px] text-mute">Tip: drop up to 20 images here at once.</p>}
     </div>
   );

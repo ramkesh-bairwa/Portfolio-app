@@ -2,14 +2,16 @@
 import { useState } from 'react';
 import { Loader2, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import Switch from './Switch';
-import { PERIODS, formatPrice } from '@/lib/price';
+import { PERIODS, formatPrice, inrHint } from '@/lib/price';
 
 const EMPTY = { name: '', price: '', currency: 'USD', period: 'year', description: '', features: '', isPopular: false, isActive: true, sortOrder: 0 };
 
 const toForm = (p) => ({ ...p, price: String(p.price), features: p.features.join('\n') });
 
-export default function PlansAdmin({ initial }) {
+export default function PlansAdmin({ initial, initialRate }) {
   const [plans, setPlans] = useState(initial);
+  const [rate, setRate] = useState(String(initialRate));
+  const [rateMsg, setRateMsg] = useState(null);
   const [form, setForm] = useState(null); // null = closed, {id?} = editing
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -49,6 +51,15 @@ export default function PlansAdmin({ initial }) {
     reload();
   }
 
+  async function saveRate(e) {
+    e.preventDefault();
+    const r = await fetch('/api/admin/plans', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ inrRate: rate }) });
+    const d = await r.json();
+    if (r.ok) setRate(String(d.inrRate));
+    setRateMsg(r.ok ? { ok: true, text: 'Saved' } : { ok: false, text: d.error });
+    setTimeout(() => setRateMsg(null), 2500);
+  }
+
   async function remove(plan) {
     if (!confirm(`Delete the ${plan.name} plan? Users already on it keep Premium.`)) return;
     await fetch(`/api/admin/plans/${plan.id}`, { method: 'DELETE' });
@@ -64,6 +75,15 @@ export default function PlansAdmin({ initial }) {
         </div>
         <button onClick={() => open(null)} className="btn-primary"><Plus size={16} /> New plan</button>
       </div>
+
+      <form onSubmit={saveRate} className="card mt-6 flex flex-wrap items-center gap-3 p-4 text-sm">
+        <span className="font-semibold">Rupee price in brackets:</span>
+        <span>1 USD = ₹</span>
+        <input className="input w-24" type="number" min="0.01" step="0.01" value={rate} onChange={(e) => setRate(e.target.value)} aria-label="Rupees per US dollar" required />
+        <button className="btn-light">Save rate</button>
+        {rateMsg && <span role={rateMsg.ok ? 'status' : 'alert'} className={rateMsg.ok ? 'text-green-700' : 'text-red-600'}>{rateMsg.text}</span>}
+        <span className="w-full text-xs text-mute">Only for display, e.g. $79 (₹{Math.round(79 * Number(rate) || 0).toLocaleString('en-IN')}). Users are still charged in the plan’s own currency.</span>
+      </form>
 
       {form && (
         <form onSubmit={save} className="card mt-6 grid gap-4 p-5 sm:grid-cols-2">
@@ -126,7 +146,7 @@ export default function PlansAdmin({ initial }) {
                 {!p.isActive && <span className="chip bg-line text-mute">Hidden</span>}
               </p>
               <p className="text-sm text-mute">
-                <span className="font-semibold text-ink">{formatPrice(p.price, p.currency)}</span> {PERIODS[p.period]} · {p.features.length} features
+                <span className="font-semibold text-ink">{formatPrice(p.price, p.currency)}</span>{inrHint(p.price, p.currency, rate) && ` (${inrHint(p.price, p.currency, rate)})`} {PERIODS[p.period]} · {p.features.length} features
               </p>
             </div>
             <Switch label={p.isActive ? 'Shown on site' : 'Hidden'} checked={p.isActive} onChange={(v) => toggleActive(p, v)} tone="green" />

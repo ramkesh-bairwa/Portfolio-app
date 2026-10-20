@@ -1,7 +1,7 @@
 'use client';
 import NextLink from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Crown, Globe, LayoutDashboard, LayoutTemplate, LogOut, Settings, Tag, Users, ExternalLink } from 'lucide-react';
+import { CreditCard, Crown, Globe, LayoutDashboard, LayoutTemplate, LogOut, Settings, Tag, Users, ExternalLink } from 'lucide-react';
 import Logo from '../Logo';
 
 const LINKS = [
@@ -10,6 +10,7 @@ const LINKS = [
   ['/admin/portfolios', 'Portfolios', Globe],
   ['/admin/requests', 'Premium requests', Crown],
   ['/admin/plans', 'Plans', Tag],
+  ['/admin/payments', 'Payments', CreditCard],
   ['/admin/templates', 'Templates', LayoutTemplate],
   ['/admin/settings', 'Settings', Settings],
 ];
