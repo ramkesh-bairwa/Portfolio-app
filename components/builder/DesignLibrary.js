@@ -4,8 +4,9 @@ import { Check, Search, X } from 'lucide-react';
 import { allDesigns, DESIGN_COLLECTIONS, DESIGN_COUNT, DESIGN_FORMATS, DESIGN_INDUSTRIES } from '@/lib/designs';
 
 const PAGE = 36;
-// Newest collection (artwork) first
-const ORDERED = () => [...allDesigns()].sort((a, b) => (a.collection === b.collection ? a.id - b.id : a.collection === 'artwork' ? -1 : 1));
+// Collections in DESIGN_COLLECTIONS order (newest first)
+const RANK = Object.fromEntries(DESIGN_COLLECTIONS.map((x, i) => [x.slug, i]));
+const ORDERED = () => [...allDesigns()].sort((a, b) => RANK[a.collection] - RANK[b.collection] || a.id - b.id);
 
 // Browse the ready-made designs. multi: pick many (gallery lists), otherwise one click picks and closes.
 export default function DesignLibrary({ onPick, onClose, multi = false }) {
@@ -41,7 +42,7 @@ export default function DesignLibrary({ onPick, onClose, multi = false }) {
         <div className="flex items-center gap-3 border-b border-line px-5 py-4">
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-bold text-ink">Design library</h2>
-            <p className="text-xs text-mute">{DESIGN_COUNT.toLocaleString('en-IN')} ready-made designs: logos, posters, product shots, fashion, rangoli, websites, apps and more. Free to use in your portfolio.</p>
+            <p className="text-xs text-mute">{DESIGN_COUNT.toLocaleString('en-IN')} ready-made designs: sketches, moodboards, logos, posters, product shots, fashion, rangoli, websites, apps and more. Free to use in your portfolio.</p>
           </div>
           <label className="relative hidden w-64 sm:block">
             <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-mute" />
