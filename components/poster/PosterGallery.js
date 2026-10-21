@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import NextLink from 'next/link';
-import { Plus, Search, Sparkles } from 'lucide-react';
+import { FilePlus2, Search, Sparkles } from 'lucide-react';
 import { POSTER_CATEGORIES, POSTER_GROUPS } from '@/lib/poster/categories';
 import { POSTER_LANGS, buildTemplate, templatesFor } from '@/lib/poster/templates';
 import { FORMATS, getFormat } from '@/lib/poster/formats';
@@ -28,6 +28,7 @@ export default function PosterGallery({ initialCategory = 'diwali' }) {
   const [size, setSize] = useState('');
   const [lang, setLang] = useState('en');
   const [limit, setLimit] = useState(15);
+  const [blankSize, setBlankSize] = useState('insta-post');
   useEffect(() => setLimit(15), [cat, lang, size]);
   useEffect(() => setMounted(true), []);
 
@@ -39,6 +40,22 @@ export default function PosterGallery({ initialCategory = 'diwali' }) {
 
   return (
     <div>
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white p-4">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-ink text-white"><FilePlus2 size={19} /></span>
+        <div className="min-w-0 flex-1">
+          <p className="font-bold">Start from scratch</p>
+          <p className="text-sm text-mute">An empty page in the size you need. Add text, shapes, photos and graphics yourself.</p>
+        </div>
+        <select className="input w-auto py-2" value={blankSize} onChange={(e) => setBlankSize(e.target.value)} aria-label="Blank page size">
+          {['Print', 'Social', 'Ads'].map((g) => (
+            <optgroup key={g} label={g}>
+              {FORMATS.filter((f) => f.group === g).map((f) => <option key={f.key} value={f.key}>{f.name}</option>)}
+            </optgroup>
+          ))}
+        </select>
+        <NextLink href={`/posters/new?format=${blankSize}`} className="btn-dark py-2">Create blank design</NextLink>
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative w-full sm:w-80">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mute" />
@@ -74,7 +91,7 @@ export default function PosterGallery({ initialCategory = 'diwali' }) {
             <span className="mr-1">{c.emoji}</span>{c.name}
           </button>
         ))}
-        {!cats.length && <p className="p-2 text-sm text-mute">No category matches “{q}”. Try another word, or start blank below.</p>}
+        {!cats.length && <p className="p-2 text-sm text-mute">No category matches “{q}”. Try another word, or start from scratch above.</p>}
       </div>
 
       <div className="mt-8 flex flex-wrap items-end justify-between gap-3">
@@ -87,7 +104,7 @@ export default function PosterGallery({ initialCategory = 'diwali' }) {
         {docs.map(({ t, doc }) => (
           <NextLink key={t.slug} href={`/posters/new?template=${t.slug}&format=${format.key}`} className="group block">
             <div className="transition group-hover:-translate-y-0.5 group-hover:drop-shadow-xl"><PosterThumb doc={doc} width={230} /></div>
-            <p className="mt-2 text-sm font-semibold">{t.name.split(' · ').slice(1).join(' · ')}{t.pro && <span className="ml-1.5 rounded bg-sun/30 px-1.5 py-0.5 text-[10px] font-bold">PHOTO</span>}</p>
+            <p className="mt-2 text-sm font-semibold">{t.name.split(' · ').slice(1).join(' · ')}{t.adv && <span className="ml-1.5 rounded bg-signal px-1.5 py-0.5 text-[10px] font-bold text-white">NEW</span>}{t.pro && <span className="ml-1.5 rounded bg-sun/30 px-1.5 py-0.5 text-[10px] font-bold">PHOTO</span>}</p>
             <p className="text-xs text-signal opacity-0 transition group-hover:opacity-100">Edit this design →</p>
           </NextLink>
         ))}
@@ -105,15 +122,6 @@ export default function PosterGallery({ initialCategory = 'diwali' }) {
         <span className="min-w-0 flex-1"><span className="block font-bold">Copy a design from a photo</span><span className="block text-sm text-mute">Have a poster or banner you like? Upload its photo and AI turns it into an editable template.</span></span>
         <span className="hidden font-semibold text-signal sm:inline">Try it →</span>
       </NextLink>
-
-      <div className="mt-6 rounded-2xl border border-line bg-white p-5">
-        <h3 className="font-bold">Start from a blank page</h3>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {FORMATS.map((f) => (
-            <NextLink key={f.key} href={`/posters/new?format=${f.key}`} className="btn-light py-1.5 text-sm"><Plus size={14} /> {f.name}</NextLink>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

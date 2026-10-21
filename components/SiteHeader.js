@@ -9,6 +9,7 @@ const LINKS = [
   ['/portfolios', 'Portfolios'],
   ['/resume', 'Resumes'],
   ['/posters', 'Posters'],
+  ['/cards', 'Wedding cards'],
   ['/plans', 'Plans'],
 ];
 

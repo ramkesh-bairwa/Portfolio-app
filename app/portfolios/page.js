@@ -25,7 +25,7 @@ export default async function PortfoliosPage() {
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <a href="#all-portfolios" className="btn-primary px-5 py-3 text-base">Browse templates</a>
-            <NextLink href="/builder/new?template=blank" className="btn-light px-5 py-3 text-base">Start blank</NextLink>
+            <NextLink href="/builder/new?template=blank" className="btn-light px-5 py-3 text-base">Start from scratch</NextLink>
           </div>
           <div className="mt-8 flex flex-wrap gap-6 text-sm text-mute">
             <span className="flex items-center gap-2"><MousePointerClick size={16} className="text-signal" /> Drag-and-drop blocks</span>

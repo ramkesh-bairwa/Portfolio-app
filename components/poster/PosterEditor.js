@@ -1,10 +1,10 @@
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Check, CloudOff, Download, Image as ImageIcon, Layers, LayoutTemplate, Loader2, Menu, Minus, PanelRight, PenLine, Plus, Redo2, Share2, Shapes,
-  Smile, Sparkles, Spline, Sticker, Type, Undo2, X, Wrench, Focus, Smartphone, Keyboard,
+  Smile, Sparkles, Spline, Sticker, Type, Undo2, X, Wrench, Focus, Smartphone, Keyboard, Copy, Trash2, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { eid, imageEl } from '@/lib/poster/design';
 import { blankPoster, posterFromTemplate } from '@/lib/poster/templates';
@@ -18,6 +18,7 @@ const TOOL_COUNT = TOOLS.length;
 import Mockup from './Mockup';
 import CopyFromPhoto from './CopyFromPhoto';
 import { scaleDoc } from '@/lib/poster/scale';
+import { MAX_PAGES, addPage, allPages, goToPage, movePage, pageCount, pageDoc, pageIndex, removePage } from '@/lib/poster/pages';
 import { curveEl, layer as curveLayer, smoothThrough } from '@/lib/poster/curve';
 import { SwatchContext } from './PosterColor';
 import Stage from './Stage';
@@ -43,10 +44,17 @@ const HANDLES = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-
 const CURSORS = { '-1,-1': 'nwse-resize', '1,1': 'nwse-resize', '1,-1': 'nesw-resize', '-1,1': 'nesw-resize', '0,-1': 'ns-resize', '0,1': 'ns-resize', '-1,0': 'ew-resize', '1,0': 'ew-resize' };
 
 function normalize(d) {
-  return {
+  const doc = {
     name: d.name || 'Untitled design', template: d.template || 'blank', format: d.format || 'custom',
     w: d.w || 794, h: d.h || 1123, bg: d.bg || { type: 'solid', color: '#FFFFFF' }, elements: Array.isArray(d.elements) ? d.elements : [],
   };
+  // multi-page designs open on the page that was open last
+  if (Array.isArray(d.pages) && d.pages.length > 1) {
+    const pages = d.pages.map((p) => ({ name: p.name || '', bg: p.bg || { type: 'solid', color: '#FFFFFF' }, elements: Array.isArray(p.elements) ? p.elements : [] }));
+    const at = Math.min(Math.max(0, d.page || 0), pages.length - 1);
+    return { ...doc, pages, page: at, bg: pages[at].bg, elements: pages[at].elements };
+  }
+  return doc;
 }
 
 // Smooth curve through drawn points (quadratic midpoints)
@@ -170,6 +178,7 @@ export default function PosterEditor({ id, templateSlug, formatKey, resume, copy
   const clip = useRef(null);
   const uploadRef = useRef(null);
   const exportNodeRef = useRef(null);
+  const exportPageRefs = useRef([]);
   docRef.current = doc;
   zoomRef.current = zoom;
   selRef.current = selected;
@@ -327,6 +336,27 @@ export default function PosterEditor({ id, templateSlug, formatKey, resume, copy
       sorted.forEach((e) => { place[e.id] = at; at += e[size] + gap; });
       return setEls(d.elements.map((e) => (place[e.id] !== undefined ? { ...e, [k]: place[e.id] } : e)));
     }
+  };
+
+  // ---------- pages ----------
+  const openPage = (i) => {
+    if (i === pageIndex(docRef.current)) return;
+    setSelected([]);
+    setEditingId(null);
+    setCropping(false);
+    setDoc(goToPage(docRef.current, i));
+    dirty.current = true;
+    setFit(true);
+  };
+  const pageAct = (kind, i = pageIndex(docRef.current)) => {
+    const d = docRef.current;
+    setSelected([]);
+    setEditingId(null);
+    if (kind === 'add') commit(addPage(d, { after: i }));
+    if (kind === 'copy') commit(addPage(d, { after: i, copy: true, eid }));
+    if (kind === 'delete' && pageCount(d) > 1 && confirm(`Delete page ${i + 1}? You can undo this.`)) commit(removePage(d, i));
+    if (kind === 'left') commit(movePage(d, i, -1));
+    if (kind === 'right') commit(movePage(d, i, 1));
   };
 
   // Change the page size and scale everything to fit
@@ -962,8 +992,10 @@ export default function PosterEditor({ id, templateSlug, formatKey, resume, copy
         if (cancelled || !exportNodeRef.current) return;
         if (exporting.share) setShareFile(await designFile(exportNodeRef.current, docRef.current, { ratio: exporting.ratio, name: docRef.current.name }));
         else {
-          await exportDesign(exportNodeRef.current, docRef.current, { type: exporting.type, ratio: exporting.ratio, name: docRef.current.name, bleed: exporting.bleed });
-          flash(`Downloaded as ${exporting.type.toUpperCase()}.`);
+          const n = pageCount(docRef.current);
+          const nodes = exporting.type === 'pdf' && n > 1 ? exportPageRefs.current.slice(0, n) : undefined;
+          await exportDesign(exportNodeRef.current, docRef.current, { type: exporting.type, ratio: exporting.ratio, name: docRef.current.name, bleed: exporting.bleed, nodes });
+          flash(`Downloaded as ${exporting.type.toUpperCase()}${nodes ? ` (${n} pages)` : n > 1 ? ` (page ${pageIndex(docRef.current) + 1})` : ''}.`);
         }
       } catch (err) {
         console.error(err);
@@ -1075,7 +1107,7 @@ export default function PosterEditor({ id, templateSlug, formatKey, resume, copy
             <div className="absolute right-0 top-11 z-50 w-72 rounded-xl border border-line bg-white p-4 shadow-2xl">
               <p className="mb-2 text-xs font-bold uppercase tracking-wide text-mute">File type</p>
               <div className="space-y-1.5">
-                {[['png', 'PNG', 'Best quality, for social media and WhatsApp'], ['jpg', 'JPG', 'Smaller file, good for sharing'], ['pdf', 'PDF', 'For printing (real paper size)']].map(([v, l, d]) => (
+                {[['png', 'PNG', 'Best quality, for social media and WhatsApp'], ['jpg', 'JPG', 'Smaller file, good for sharing'], ['pdf', 'PDF', pageCount(doc) > 1 ? `For printing, all ${pageCount(doc)} pages in one file` : 'For printing (real paper size)']].map(([v, l, d]) => (
                   <label key={v} className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 ${exportOpts.type === v ? 'border-signal bg-signal-soft' : 'border-line'}`}>
                     <input type="radio" name="ftype" className="mt-1" checked={exportOpts.type === v} onChange={() => setExportOpts({ ...exportOpts, type: v })} />
                     <span><span className="block text-sm font-semibold">{l}</span><span className="block text-xs text-mute">{d}</span></span>
@@ -1121,9 +1153,10 @@ export default function PosterEditor({ id, templateSlug, formatKey, resume, copy
           <div className="thin-scroll w-[280px] overflow-y-auto">{panelBody}</div>
         </aside>
 
+        <div className="flex min-w-0 flex-1 flex-col">
         <main
           ref={viewRef}
-          className={`thin-scroll relative min-w-0 flex-1 overflow-auto bg-[#E7EBF2] ${spaceDown || hand ? 'cursor-grab [&_*]:!cursor-grab' : draw.on || pen ? 'cursor-crosshair [&_*]:!cursor-crosshair' : ''}`}
+          className={`thin-scroll relative min-h-0 min-w-0 flex-1 overflow-auto bg-[#E7EBF2] ${spaceDown || hand ? 'cursor-grab [&_*]:!cursor-grab' : draw.on || pen ? 'cursor-crosshair [&_*]:!cursor-crosshair' : ''}`}
           onPointerDown={onBackdropDown}
           onDoubleClick={() => { if (penRef.current) finishPen(); }}
           onDragOver={(e) => { if (Array.from(e.dataTransfer.types).includes('Files')) e.preventDefault(); }}
@@ -1250,6 +1283,8 @@ export default function PosterEditor({ id, templateSlug, formatKey, resume, copy
             </div>
           )}
         </main>
+        <PageBar doc={doc} open={openPage} act={pageAct} />
+        </div>
 
         <aside className={`${mobilePanel === 'right' ? 'absolute inset-y-0 right-0 z-30 flex shadow-2xl' : 'hidden'} w-[300px] shrink-0 flex-col border-l border-line bg-paper lg:static lg:flex lg:shadow-none`}>
           <div className="flex items-center justify-between border-b border-line bg-white px-4 py-2 lg:hidden">
@@ -1297,6 +1332,9 @@ export default function PosterEditor({ id, templateSlug, formatKey, resume, copy
       {exporting && (
         <div aria-hidden style={{ position: 'fixed', left: -100000, top: 0, pointerEvents: 'none' }}>
           <Stage doc={doc} scale={1} transparent={exporting.transparent} stageRef={exportNodeRef} hideEmpty />
+          {exporting.type === 'pdf' && pageCount(doc) > 1 && !exporting.share && allPages(doc).map((_, i) => (
+            <Stage key={i} doc={pageDoc(doc, i)} scale={1} stageRef={(el) => { exportPageRefs.current[i] = el; }} hideEmpty />
+          ))}
         </div>
       )}
     </div>
@@ -1346,6 +1384,49 @@ function ShortcutsDialog({ onClose }) {
         <dl className="divide-y divide-line text-sm">
           {SHORTCUTS.map(([a, k]) => <div key={a} className="flex justify-between gap-4 py-1.5"><dt>{a}</dt><dd className="text-right font-mono text-xs text-mute">{k}</dd></div>)}
         </dl>
+      </div>
+    </div>
+  );
+}
+
+// One small page preview; memoised so only the page being edited re-renders
+const PageThumb = memo(function PageThumb({ doc, height }) {
+  const scale = height / doc.h;
+  return <div className="overflow-hidden rounded-[3px] shadow-sm" style={{ width: doc.w * scale, height }}><Stage doc={doc} scale={scale} hideEmpty /></div>;
+});
+
+// Strip of pages under the canvas: open, add, duplicate, reorder and delete pages
+function PageBar({ doc, open, act }) {
+  const live = useDeferredValue(doc);
+  const pages = useMemo(() => allPages(live).map((_, i) => pageDoc(live, i)), [live]);
+  const at = pageIndex(doc);
+  const n = pageCount(doc);
+  const names = allPages(doc).map((p) => p.name);
+  return (
+    <div className="flex shrink-0 items-center gap-3 overflow-x-auto border-t border-line bg-white px-3 py-2 thin-scroll" aria-label="Pages">
+      <span className="shrink-0 text-xs font-semibold text-mute">{n > 1 ? `Page ${at + 1} of ${n}` : 'Pages'}</span>
+      {pages.map((pd, i) => (
+        <button
+          key={i}
+          onClick={() => open(i)}
+          className={`group relative shrink-0 rounded-md border-2 p-1 ${i === at ? 'border-signal bg-signal-soft' : 'border-transparent hover:border-line'}`}
+          aria-label={`Open page ${i + 1}${names[i] ? `: ${names[i]}` : ''}`}
+          aria-current={i === at ? 'page' : undefined}
+        >
+          <PageThumb doc={pd} height={52} />
+          <span className="mt-0.5 block max-w-[80px] truncate text-center text-[10px] font-semibold text-mute">{i + 1}{names[i] ? ` · ${names[i]}` : ''}</span>
+        </button>
+      ))}
+      <div className="flex shrink-0 items-center gap-0.5">
+        <button onClick={() => act('add')} disabled={n >= MAX_PAGES} className="btn-ghost px-2 text-xs" title="Add a blank page after this one"><Plus size={14} /> Page</button>
+        <button onClick={() => act('copy')} disabled={n >= MAX_PAGES} className="btn-ghost px-2" title="Duplicate this page" aria-label="Duplicate page"><Copy size={14} /></button>
+        {n > 1 && (
+          <>
+            <button onClick={() => act('left')} disabled={at === 0} className="btn-ghost px-2" title="Move page earlier" aria-label="Move page earlier"><ChevronLeft size={14} /></button>
+            <button onClick={() => act('right')} disabled={at === n - 1} className="btn-ghost px-2" title="Move page later" aria-label="Move page later"><ChevronRight size={14} /></button>
+            <button onClick={() => act('delete')} className="btn-ghost px-2 text-red-600" title="Delete this page" aria-label="Delete page"><Trash2 size={14} /></button>
+          </>
+        )}
       </div>
     </div>
   );

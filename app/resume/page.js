@@ -23,6 +23,7 @@ export default function ResumePage() {
           <div className="mt-6 flex flex-wrap gap-3">
             <a href="#resume-templates" className="btn-primary px-5 py-3 text-base"><PenLine size={18} /> Choose a resume template</a>
             <NextLink href="/resume/new?template=software-engineer-classic-ats" className="btn-light px-5 py-3 text-base">Start with a simple ATS resume</NextLink>
+            <NextLink href="/resume/new?template=blank" className="btn-light px-5 py-3 text-base">Start from scratch</NextLink>
           </div>
           <div className="mt-8 flex flex-wrap gap-6 text-sm text-mute">
             <span className="flex items-center gap-2"><BadgeCheck size={16} className="text-emerald-600" /> ATS-friendly designs</span>

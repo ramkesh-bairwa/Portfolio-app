@@ -2,13 +2,14 @@
 import { useEffect, useState } from 'react';
 import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Check, Clock, Crown, ExternalLink, Eye, Globe, PenLine, Plus, Trash2 } from 'lucide-react';
+import { Check, Clock, Crown, ExternalLink, Eye, FilePlus2, FileText, Globe, Image as ImageIcon, LayoutTemplate, PenLine, Plus, Trash2 } from 'lucide-react';
 import PreviewModal from './PreviewModal';
 import TemplateThumb from './TemplateThumb';
 import { renderDocument } from '@/lib/render';
 import ResumeView, { ResumeAssets } from './resume/ResumeView';
 import { getDesign } from '@/lib/resume/designs';
 import Stage from './poster/Stage';
+import { FORMATS } from '@/lib/poster/formats';
 
 const ago = (s) => {
   const d = (Date.now() - new Date(String(s).replace(' ', 'T')).getTime()) / 1000;
@@ -26,6 +27,7 @@ export default function DashboardClient({ user, portfolios: initial, resumes: in
   const [mounted, setMounted] = useState(false);
   const [preview, setPreview] = useState(null);
   const [req, setReq] = useState(request);
+  const [blankSize, setBlankSize] = useState('insta-post');
   useEffect(() => setMounted(true), []);
   const tpl = (slug) => templates.find((t) => t.slug === slug);
 
@@ -62,6 +64,33 @@ export default function DashboardClient({ user, portfolios: initial, resumes: in
           <NextLink href="/posters" className="btn-light"><Plus size={16} /> New poster</NextLink>
         </div>
       </div>
+
+      <section className="mt-8 rounded-2xl border border-line bg-white p-5" aria-labelledby="scratch-title">
+        <h2 id="scratch-title" className="flex items-center gap-2 font-bold"><FilePlus2 size={18} /> Start from scratch</h2>
+        <p className="mt-0.5 text-sm text-mute">Skip the templates and build your own from an empty page.</p>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <NextLink href="/builder/new?template=blank" className="flex items-center gap-3 rounded-xl border border-line p-4 transition-colors hover:border-ink/40">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-signal-soft text-signal"><LayoutTemplate size={18} /></span>
+            <span className="min-w-0"><span className="block font-semibold">Blank portfolio</span><span className="block text-xs text-mute">Drag in only the blocks you need</span></span>
+          </NextLink>
+          <NextLink href="/resume/new?template=blank" className="flex items-center gap-3 rounded-xl border border-line p-4 transition-colors hover:border-ink/40">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-700"><FileText size={18} /></span>
+            <span className="min-w-0"><span className="block font-semibold">Blank resume</span><span className="block text-xs text-mute">Empty sections, ATS-friendly design</span></span>
+          </NextLink>
+          <div className="flex items-center gap-3 rounded-xl border border-line p-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-sun/25 text-ink"><ImageIcon size={18} /></span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">Blank poster</p>
+              <div className="mt-1 flex gap-1.5">
+                <select className="input min-w-0 flex-1 py-1 text-xs" value={blankSize} onChange={(e) => setBlankSize(e.target.value)} aria-label="Poster size">
+                  {FORMATS.map((f) => <option key={f.key} value={f.key}>{f.name}</option>)}
+                </select>
+                <NextLink href={`/posters/new?format=${blankSize}`} className="btn-dark px-3 py-1 text-xs">Create</NextLink>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="mt-8 flex flex-wrap items-center gap-4 rounded-2xl border border-line bg-white p-5">
         <span className={`grid h-11 w-11 place-items-center rounded-xl ${user.canPublish ? 'bg-sun/25' : 'bg-paper'}`}><Crown size={20} /></span>
